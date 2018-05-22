@@ -107,10 +107,8 @@ foo_otherdatafiles=fsaverage.tar.gz fsaverage_sym.tar.gz \
 	EC_average.tar.gz mult-comp-cor.tar.gz Yeo_Brainmap_MNI152.tar.gz \
 	build_gcs_morph.csh cvs_avg35.tar.gz cvs_avg35_inMNI152.tar.gz
 
-if INCLUDE_INFANTFS
 install_CNYBCH=true
 foo_otherdatafiles += CNYBCH.tar.gz
-endif
 
 if SMALL_DIST_INSTALL
 foo_datafiles=\

@@ -2,9 +2,7 @@
 # Makefile.am for scripts
 #
 
-if INCLUDE_INFANTFS
 SUBDIRS = InfantFS
-endif
 
 dist_bin_SCRIPTS = \
 annot2std \
