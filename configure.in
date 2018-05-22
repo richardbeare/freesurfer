@@ -4046,6 +4046,7 @@ AC_OUTPUT([Makefile
            repair_siemens_file/Makefile
            rgb/Makefile
            scripts/Makefile
+           scripts/InfantFS/Makefile
            freeview/Makefile
            connectgraph/Makefile
            spherical_stats/Makefile

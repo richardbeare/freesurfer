@@ -2,6 +2,8 @@
 # Makefile.am for scripts
 #
 
+SUBDIRS = InfantFS
+
 dist_bin_SCRIPTS = \
 annot2std \
 aparc2feat \
