@@ -196,7 +196,7 @@ install:
 	gunzip -c $(top_srcdir)/distribution/average/CNYBCH.tar.gz | tar xvf - ;\
 	pwd ;\
 	mv $(top_builddir)/distribution/average/CNYBCH $(DESTDIR)$(prefix)/average ;\
-	chmod -R 775 $(DESTDIR)$(prefix)/average/CNYBCH ;\
+	chmod -R 775 $(DESTDIR)$(prefix)/average/CNYBCH ;
 
 uninstall-hook:
 	rm -Rf $(DESTDIR)$(prefix)/subjects/cvs_avg35
