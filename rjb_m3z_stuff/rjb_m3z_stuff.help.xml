@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE help [
+<!ENTITY lt "#38;#60;">
+<!ENTITY gt "&#62;">
+<!ENTITY amp "&#38;#38;">
+<!ELEMENT help (name , synopsis , description* , arguments+ , outputs* , example* , bugs* , references* , reporting* , see-also*)*>
+<!ELEMENT name (#PCDATA)>
+<!ELEMENT synopsis (#PCDATA)>
+<!ELEMENT description (#PCDATA)>
+<!ELEMENT arguments (positional* , required-flagged* , optional-flagged*)*>
+<!ELEMENT positional (intro* , argument* , explanation*)*>
+<!ELEMENT required-flagged (intro* , argument* , explanation*)*>
+<!ELEMENT optional-flagged (intro* , argument* , explanation*)*>
+<!ELEMENT intro (#PCDATA)>
+<!ELEMENT argument (#PCDATA)>
+<!ELEMENT explanation (#PCDATA)>
+<!ELEMENT outputs (output* , explanation*)>
+<!ELEMENT output (#PCDATA)>
+<!ELEMENT example (#PCDATA)>
+<!ELEMENT bugs (#PCDATA)>
+<!ELEMENT references (#PCDATA)>
+<!ELEMENT reporting (#PCDATA)>
+<!ELEMENT see-also (#PCDATA)>
+]>
+
+<help>
+  <name>rjb_m3z_stuff</name>
+  <synopsis>explore m3z files [options]</synopsis>
+  <description>This program is for messing with m3z files. It appears
+  that there is a transform saved in the m3z file that is used by
+  mri_ca_register. That transform doesn't appear to be used when the
+  warp is applied by mri_convert. mri_ca_register will segfault if the
+  transform isn't there, such as when a warp is created by
+  mri_warp_convert. This tool allows a transform to be added, and does
+  the downsampling.
+  </description>
+  <arguments>
+    <positional>
+      <intro>None.</intro>
+    </positional>
+    <required-flagged>
+      <intro>Exactly one input is required:</intro>
+      <argument>--inm3z &lt;in.m3z&gt;</argument>
+      <explanation>input M3Z warp</explanation>
+    </required-flagged>
+    <required-flagged>
+      <intro>Exactly one output is required:</intro>
+      <argument>--outm3z &lt;out.m3z&gt;</argument>
+      <explanation>output M3Z warp</explanation>
+    </required-flagged>
+    <optional-flagged>
+      <intro>Optional flags </intro>
+      <argument>--affineMatrix &lt;mat&gt; </argument>
+      <explanation>affine matrix used to initialise mri_ca_register (probably talairach.lta). It will also be in the warp field.</explanation>
+    </optional-flagged>
+  </arguments>
+</help>

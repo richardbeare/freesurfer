@@ -456,6 +456,7 @@ add_subdirectories(
   talairach_afd
   talairach_avi
   tkregister2
+  rjb_m3z_stuff
 )
 
 # the following program subdirectories aren't required in the standard
