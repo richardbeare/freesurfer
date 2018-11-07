@@ -53,7 +53,7 @@ static void printUsage(void);
 static bool parseCommandLine(int argc, char *argv[], Parameters & P);
 
 static char vcid[] =
-    "$Id: mri_warp_convert.cpp,v 1.1 2016/06/16 19:57:06 ohinds Exp $";
+    "$Id: rjb_m3z_stuff.cpp,v 1.1 2018/11/01 $";
 const char *Progname = NULL;
 
 GCAM* readM3Z(const string& warp_file)
