@@ -21,6 +21,7 @@ rm -Rf CMakeCache.txt CMakeFiles/ CMakeTmp/
 
 cmake ../src -G "Unix Makefiles" \
 -DITK_BUILD_DEFAULT_MODULES=OFF \
+-DBUILD_TESTING=OFF \
 -DITKGroup_Core=ON \
 -DITKGroup_Filtering=ON \
 -DCMAKE_BUILD_TYPE=Release \
@@ -37,6 +38,6 @@ cmake ../src -G "Unix Makefiles" \
 
 make clean
 make -j 8
-make test
+#make test
 make install
 
