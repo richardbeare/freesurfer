@@ -5,7 +5,7 @@ set -e
 [ "$#" != "1" ] && echo "error: usage: build.sh <prefix>" && exit 1
 INSTALL_DIR="$1"
 
-cd KWWidgets-HEAD-cvs
+cd kwwidgets
 
 # building kwwidgets requires vtk, if VTK_DIR is not set, hope that it
 # has been built right above the INSTALL_DIR path
@@ -25,7 +25,7 @@ fi
 cmake . \
   -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
   -DVTK_DIR=${VTK_DIR} \
-  -DCMAKE_CXX_FLAGS="-I/usr/X11/include -mmacosx-version-min=10.8"
+  -DCMAKE_CXX_FLAGS="-I/usr/X11/include"
 
 make -j8
 make install

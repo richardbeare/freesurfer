@@ -25,7 +25,7 @@ if [ ! -e "${NETCDF_DIR}" ] ; then
   exit 1
 fi
 
-cd minc-1.5
+cd minc
 
 ./configure --prefix=${INSTALL_DIR} CPPFLAGS=-I${NETCDF_DIR}/include LDFLAGS=-L${NETCDF_DIR}/lib
 

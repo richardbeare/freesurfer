@@ -134,9 +134,9 @@ for package in pkgs:
   if os.path.exists(src_dir): shutil.rmtree(src_dir)
   os.makedirs(src_dir)
   os.chdir(src_dir)
-
+  os.makedirs(package.name)
   # untar the tar
-  ret = subprocess.call('tar -xzf %s' % package.tarball, shell=True)
+  ret = subprocess.call('tar -xzf %s -C %s --strip-components 1' % (package.tarball, package.name), shell=True)
   if ret != 0: exit(ret)
 
   # run the build script

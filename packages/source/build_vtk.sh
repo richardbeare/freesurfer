@@ -5,7 +5,7 @@ set -e
 [ "$#" != "1" ] && echo "error: usage: build.sh <prefix>" && exit 1
 INSTALL_DIR="$1"
 
-cd vtk-v5.10.1
+cd vtk
 
 cmake . \
   -DCMAKE_BUILD_TYPE=Release \

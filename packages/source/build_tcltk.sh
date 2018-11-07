@@ -18,6 +18,12 @@ export COMBO_DIR="${INSTALL_DIR}"
 # bug fix for problem that prevents tksurfer from globbing directories on 64 bit NFS file systems
 [ "$(uname -s)" == "Linux" ] && export CFLAGS="-DHAVE_STRUCT_DIRENT64=1"
 
+# account for slightly modified process for dealing with tar files
+# My method renames the output folder, whic works for cases with 
+# only one package. This one has multiple, so we move them after
+mv ${COMBO_DIR}/src/tcltktixblt/* ${COMBO_DIR}/src/
+rmdir ${COMBO_DIR}/src/tcltktixblt
+
 export MACOSX_DEPLOYMENT_TARGET="10.4"
 export PATH="${COMBO_DIR}/src/tcl8.4.6/unix:${COMBO_DIR}/src/tk8.4.6/unix:${PATH}"
 export LD_LIBRARY_PATH="${COMBO_DIR}/src/tcl8.4.6/unix"
@@ -137,3 +143,5 @@ make install prefix=${COMBO_DIR}
 [ -e "${COMBO_DIR}/lib/libBLT.2.4.dylib" ] && ln -s libBLT.2.4.dylib ${COMBO_DIR}/lib/libBLT.2.dylib
 [ -e "${COMBO_DIR}/lib/libBLT24.a"       ] && chmod 755 ${COMBO_DIR}/lib/libBLT24.a
 [ -e "${COMBO_DIR}/lib/libBLT24.a"       ] && ranlib ${COMBO_DIR}/lib/libBLT24.a
+exit 0
+
