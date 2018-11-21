@@ -42,8 +42,6 @@
       <intro>Exactly one input is required:</intro>
       <argument>--inm3z &lt;in.m3z&gt;</argument>
       <explanation>input M3Z warp</explanation>
-    </required-flagged>
-    <required-flagged>
       <intro>Exactly one output is required:</intro>
       <argument>--outm3z &lt;out.m3z&gt;</argument>
       <explanation>output M3Z warp</explanation>
@@ -52,6 +50,11 @@
       <intro>Optional flags </intro>
       <argument>--affineMatrix &lt;mat&gt; </argument>
       <explanation>affine matrix used to initialise mri_ca_register (probably talairach.lta). It will also be in the warp field.</explanation>
+      <argument>--sourceImage &lt;image&gt; </argument>
+      <explanation>Source image for the warp.</explanation>
+      <argument>--atlasImage &lt;gca file&gt; </argument>
+      <explanation>Atlas image.</explanation>
     </optional-flagged>
+
   </arguments>
 </help>

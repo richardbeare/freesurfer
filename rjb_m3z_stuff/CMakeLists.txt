@@ -1,4 +1,4 @@
-project(mri_warp_convert)
+project(rjb_m3z_stuff)
 
 include_directories(${FS_INCLUDE_DIRS})
 

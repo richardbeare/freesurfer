@@ -27,6 +27,8 @@ extern "C"
 #include "mri.h"
 #include "mri_circulars.h"
 #include "version.h"
+#include "diag.h"
+#include "cma.h"
 
 #ifdef __cplusplus
 }
@@ -42,12 +44,14 @@ struct Parameters
   string in_warp;
   string out_warp;
   string affineMat;
+  string sourceImage;
+  string atlasImage;
   filetypes::FileType in_type;
   filetypes::FileType out_type;
 };
 
 static struct Parameters P =
-  { "", "", "", filetypes::UNKNOWN, filetypes::UNKNOWN};
+  { "", "", "", "", "", filetypes::UNKNOWN, filetypes::UNKNOWN};
 
 static void printUsage(void);
 static bool parseCommandLine(int argc, char *argv[], Parameters & P);
@@ -72,7 +76,6 @@ GCAM* readM3Z(const string& warp_file)
 /* from mri_info */
 int PrettyMatrixPrint(const MATRIX *mat)
 {
-  int row;
 
   if (mat == NULL)
   {
@@ -88,14 +91,15 @@ int PrettyMatrixPrint(const MATRIX *mat)
   {
     ErrorReturn(ERROR_BADPARM,(ERROR_BADPARM, "mat is not of 4 x 4")) ;
   }
-
+#if 0
   for (row=1; row < 5; ++row)
   {
     printf("              %8.4f %8.4f %8.4f %10.4f\n",
            mat->rptr[row][1], mat->rptr[row][2],
            mat->rptr[row][3], mat->rptr[row][4]);
   }
-
+#endif
+  MatrixPrint(stdout, mat);
   return (NO_ERROR);
 }
 
@@ -121,17 +125,22 @@ void VGInfo(const VOL_GEOM *vg)
 void Info(const GCAM* gcam)
 {
   cout << "Width, height, depth " << gcam->width << " " << gcam->height << " " << gcam->depth << endl;
+  cout << "GCA pointer: " << gcam->gca << endl;
+  cout << "Node pointer: " << gcam->nodes << endl;
   cout << "Atlas VG" << endl;
   VGInfo(&(gcam->atlas));
   cout << endl;
   cout << "Image VG" << endl;
   VGInfo(&(gcam->image));
   PrettyMatrixPrint((gcam->m_affine));
+
+  cout << "mri_xind: " << gcam->mri_xind << endl; 
+  
   
   cout << "Type : " << gcam->type << endl;
   cout << "status : " << gcam->status << endl;
 
-  
+ 
 }
 
 void writeM3Z(const string& fname, const GCAM *gcam)
@@ -140,6 +149,68 @@ void writeM3Z(const string& fname, const GCAM *gcam)
   GCAMwrite(gcam, fname.c_str());
 }
 
+void GCAMInitStuff(GCA_MORPH *gcam, GCA *gca)
+{
+  // added by xhan
+  int x, y, z, n, label, max_n, max_label;
+  float max_p;
+  GC1D *gc;
+  GCA_MORPH_NODE  *gcamn ;
+  GCA_PRIOR *gcap;
+
+  gcam->ninputs = 1 ;
+  gcam->gca = gca ;
+  gcam->spacing = gca->prior_spacing;
+
+  // use gca information
+  for (x = 0 ; x < gcam->width ; x++)
+  {
+    for (y = 0 ; y < gcam->height ; y++)
+    {
+      for (z = 0 ; z < gcam->depth ; z++)
+      {
+        gcamn = &gcam->nodes[x][y][z] ;
+        gcap = &gca->priors[x][y][z] ;
+        max_p = 0 ;
+        max_n = -1 ;
+        max_label = 0 ;
+
+        // find the label which has the max p
+        for (n = 0 ; n < gcap->nlabels ; n++)
+        {
+          label = gcap->labels[n] ;   // get prior label
+          if (label == Gdiag_no)
+          {
+            DiagBreak() ;
+          }
+          if (label >= MAX_CMA_LABEL)
+          {
+            printf("invalid label %d at (%d, %d, %d) in prior volume\n",
+                   label, x, y, z);
+          }
+          if (gcap->priors[n] >= max_p) // update the max_p and max_label
+          {
+            max_n = n ;
+            max_p = gcap->priors[n] ;
+            max_label = gcap->labels[n] ;
+          }
+        }
+
+        gcamn->label = max_label ;
+        gcamn->n = max_n ;
+        gcamn->prior = max_p ;
+        gc = GCAfindPriorGC(gca, x, y, z, max_label) ;
+        // gc can be NULL
+        gcamn->gc = gc ;
+        gcamn->log_p = 0 ;
+
+      }
+    }
+  }
+
+  GCAMcomputeOriginalProperties(gcam) ;
+  GCAMcomputeMaxPriorLabels(gcam) ;
+}
 
 int main(int argc, char *argv[])
 {
@@ -172,6 +243,13 @@ int main(int argc, char *argv[])
   // Read input transform and convert to RAS2RAS:
   GCA_MORPH* gcam = NULL;
   gcam = readM3Z(P.in_warp.c_str());
+  Info(gcam);
+  cout << "========================" << endl;
+#if 0
+  MRI *mri = GCAMwriteMRI(gcam, NULL, GCAM_INVALID);
+  MRIwrite(mri, "invalid.mgz");
+  MRIfree(&mri);
+#endif
 
   if (!gcam)
   {
@@ -179,25 +257,72 @@ int main(int argc, char *argv[])
               Progname, P.in_warp.c_str());
   }
 
+
+  MRI *src = NULL;
+  MRI *atlas = NULL;
+
+  if (P.sourceImage != "") {
+    src = MRIread(P.sourceImage.c_str());
+    getVolGeom(src, &(gcam->image));
+    //strcpy(gcam->image.fname, P.sourceImage.c_str());
+    //gcam->image.valid = true;
+  }
+#if 0  
+  MRI *mri = GCAMwriteMRI(gcam, NULL, GCAM_INVALID);
+  MRIwrite(mri, "invalid.mgz");
+  MRIfree(&mri);
+#endif
+
+  if (P.atlasImage != "") {
+    atlas=MRIread(P.atlasImage.c_str());
+    getVolGeom(atlas, &(gcam->atlas));
+  }
+#if 0
+  MRI *mri = GCAMwriteMRI(gcam, NULL, GCAM_INVALID);
+  MRIwrite(mri, "invalid.mgz");
+  MRIfree(&mri);
+#endif
   if (lta != NULL) {
-    gcam->m_affine = lta->xforms->m_L;
+    if ( src == NULL || atlas == NULL ) {
+       cout << "Missing src or destination image, not remapping transform" << endl;
+    } else {
+      LTAchangeType(lta, LINEAR_RAS_TO_RAS);
+      LTAmodifySrcDstGeom(lta, src, atlas);
+      LTAchangeType(lta, LINEAR_VOX_TO_VOX);
+    }
+    LTAwrite(lta, "mod.lta");
+    gcam->m_affine = MatrixCopy(lta->xforms[0].m_L, NULL);
+    gcam->det = MatrixDeterminant(gcam->m_affine);
   }
 
   if (gcam->m_affine == NULL) {
-    cout << "Initializing identity matrix" << endl;
+    cout << "Initializing identity matrix - this is probably wrong, but it will stop some things crashing" << endl;
+
     gcam->m_affine = MatrixIdentity(4, NULL);
+
   }
 
+  MRIfree(&src);
+  MRIfree(&atlas);
+  gcam->type = GCAM_VOX;
   Info(gcam);
 
   cout << "Downsampling" << endl;
 
   GCA_MORPH* gcam2 = NULL;
   gcam2 = GCAMdownsample2(gcam);
+#if 1
+  MRI *mri = GCAMwriteMRI(gcam2, NULL, GCAM_INVALID);
+  MRIwrite(mri, "invalid.mgz");
+  MRIfree(&mri);
+#endif
 
+  //GCA *gca = GCAread(P.atlasImage.c_str());
+ 
+  //GCAMInitStuff(gcam2, gca); 
   cout << "Writing" << endl;
   writeM3Z(P.out_warp.c_str(), gcam2);
-  //writeM3Z(P.out_warp.c_str(), gcam);
+  //writeM2Z(P.out_warp.c_str(), gcam);
 
 
   GCAMfree(&gcam);
@@ -266,6 +391,19 @@ static int parseNextCommand(int argc, char *argv[], Parameters & P)
     nargs = 1;
     cout << "--affineMatrix: " << P.affineMat << " ." << endl;
   } 
+  else if (!strcmp(option, "SOURCEIMAGE") )
+  {
+    P.sourceImage = string(argv[1]);
+    nargs=1;
+    cout << "--sourceImage: " << P.sourceImage << " ." << endl;
+  }
+ else if (!strcmp(option, "ATLASIMAGE") )  
+  {
+    P.atlasImage = string(argv[1]);
+    nargs=1;
+    cout << "--atlasImage: " << P.atlasImage << " ." << endl;
+  }
+
   else if (!strcmp(option, "HELP") )
   {
     printUsage();
