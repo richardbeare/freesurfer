@@ -104,6 +104,12 @@ int PrettyMatrixPrint(const MATRIX *mat)
 }
 
 
+void dumpMRI(MRI *M)
+{
+
+  cout << "Value" << MRIgetVoxVal(M, 0, 0, 0, 0) << endl;
+}
+
 void VGInfo(const VOL_GEOM *vg)
 {
   cout << "VG Valid: " << vg->valid << endl;
@@ -147,69 +153,6 @@ void writeM3Z(const string& fname, const GCAM *gcam)
 // Write an m3z file. Just calls down to GCAMwrite
 {
   GCAMwrite(gcam, fname.c_str());
-}
-
-void GCAMInitStuff(GCA_MORPH *gcam, GCA *gca)
-{
-  // added by xhan
-  int x, y, z, n, label, max_n, max_label;
-  float max_p;
-  GC1D *gc;
-  GCA_MORPH_NODE  *gcamn ;
-  GCA_PRIOR *gcap;
-
-  gcam->ninputs = 1 ;
-  gcam->gca = gca ;
-  gcam->spacing = gca->prior_spacing;
-
-  // use gca information
-  for (x = 0 ; x < gcam->width ; x++)
-  {
-    for (y = 0 ; y < gcam->height ; y++)
-    {
-      for (z = 0 ; z < gcam->depth ; z++)
-      {
-        gcamn = &gcam->nodes[x][y][z] ;
-        gcap = &gca->priors[x][y][z] ;
-        max_p = 0 ;
-        max_n = -1 ;
-        max_label = 0 ;
-
-        // find the label which has the max p
-        for (n = 0 ; n < gcap->nlabels ; n++)
-        {
-          label = gcap->labels[n] ;   // get prior label
-          if (label == Gdiag_no)
-          {
-            DiagBreak() ;
-          }
-          if (label >= MAX_CMA_LABEL)
-          {
-            printf("invalid label %d at (%d, %d, %d) in prior volume\n",
-                   label, x, y, z);
-          }
-          if (gcap->priors[n] >= max_p) // update the max_p and max_label
-          {
-            max_n = n ;
-            max_p = gcap->priors[n] ;
-            max_label = gcap->labels[n] ;
-          }
-        }
-
-        gcamn->label = max_label ;
-        gcamn->n = max_n ;
-        gcamn->prior = max_p ;
-        gc = GCAfindPriorGC(gca, x, y, z, max_label) ;
-        // gc can be NULL
-        gcamn->gc = gc ;
-        gcamn->log_p = 0 ;
-
-      }
-    }
-  }
-
-  GCAMcomputeOriginalProperties(gcam) ;
-  GCAMcomputeMaxPriorLabels(gcam) ;
 }
 
 int main(int argc, char *argv[])
@@ -263,9 +206,7 @@ int main(int argc, char *argv[])
 
   if (P.sourceImage != "") {
     src = MRIread(P.sourceImage.c_str());
-    getVolGeom(src, &(gcam->image));
-    //strcpy(gcam->image.fname, P.sourceImage.c_str());
-    //gcam->image.valid = true;
+  //  getVolGeom(src, &(gcam->image));
   }
 #if 0  
   MRI *mri = GCAMwriteMRI(gcam, NULL, GCAM_INVALID);
@@ -275,7 +216,7 @@ int main(int argc, char *argv[])
 
   if (P.atlasImage != "") {
     atlas=MRIread(P.atlasImage.c_str());
-    getVolGeom(atlas, &(gcam->atlas));
+//    getVolGeom(atlas, &(gcam->atlas));
   }
 #if 0
   MRI *mri = GCAMwriteMRI(gcam, NULL, GCAM_INVALID);
