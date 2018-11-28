@@ -56,6 +56,8 @@
       pass it via --insrcgeom. </intro>
       <argument>--insrcgeom</argument>
       <explanation>specify src image geometry (mov volume)</explanation>
+      <argument>--mask</argument>
+      <explanation>set values outside the mask to zero - only used for m3z output.</explanation>
     </optional-flagged>
   </arguments>
   <example>Convert FSL warp to M3Z (FreeSurfer):
