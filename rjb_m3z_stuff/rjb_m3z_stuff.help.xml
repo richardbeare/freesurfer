@@ -53,7 +53,8 @@
       <argument>--sourceImage &lt;image&gt; </argument>
       <explanation>Source image for the warp.</explanation>
       <argument>--atlasImage &lt;gca file&gt; </argument>
-      <explanation>Atlas image.</explanation>
+      <explanation>Atlas image. Used in adjustment of affine matrix</explanation>
+      <argument>--maskImage &lt;Marking area of interest - must be conformed with atlas &gt; </argument>
     </optional-flagged>
 
   </arguments>

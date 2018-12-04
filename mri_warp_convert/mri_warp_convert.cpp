@@ -55,7 +55,7 @@ struct Parameters
   string in_warp;
   string out_warp;
   string in_src_geom;
-  string in_mask;
+  string in_affine;
   filetypes::FileType in_type;
   filetypes::FileType out_type;
 };
@@ -159,7 +159,6 @@ GCAM* readITK(const string& warp_file, const string& src_geom)
 {
 
   MRI* itk = MRIread(warp_file.c_str());
-  MRI* mask = NULL;
 
   if (itk == NULL)
   {
@@ -172,13 +171,6 @@ GCAM* readITK(const string& warp_file, const string& src_geom)
   {
 	cerr << "ERROR: couldn't read source geometry from " << src_geom << endl;
     return NULL;
-  }
-
-  if (P.in_mask != "") {
-    mask = MRIread(P.in_mask.c_str());
-    if (mask == NULL) {
-      cerr << "ERROR: couldn't read mask from " << P.in_mask << endl;
-    }
   }
 
 
@@ -214,54 +206,141 @@ GCAM* readITK(const string& warp_file, const string& src_geom)
       {
  
         GCA_MORPH_NODE* node = &gcam->nodes[c][r][s];
-        float mval = 1;
-        if (mask != NULL) {
-          mval = MRIgetVoxVal(mask, c, r, s, 0);
-        }
-        if (mval == 0) {
-          // The read function appears to check for invalid points
-          // based on whether everything is zero, so we must set it
-          // here. The invalid flag gets overwritten.
-          node->invalid = GCAM_AREA_INVALID;
-          node->origx = 0;
-          node->origy = 0;
-          node->origz = 0;
-          node->x = 0;
-          node->y = 0;
-          node->z = 0;
-        }  
-        else
-        {
-          node->origx = c;
-          node->origy = r;
-          node->origz = s;
-          node->xn = c;
-          node->yn = r;
-          node->zn = s;
-
-          VECTOR3_LOAD(orig_ind, c, r, s);
-          orig_lps = MatrixMultiplyD(ref_vox2lps, orig_ind, orig_lps);
-
-          VECTOR3_LOAD(warp_lps,
-                       MRIgetVoxVal(itk, c, r, s, 0),
-                       MRIgetVoxVal(itk, c, r, s, 1),
-                       MRIgetVoxVal(itk, c, r, s, 2));
-          dest_lps = VectorAdd(orig_lps, warp_lps, dest_lps);
-          dest_ind = MatrixMultiplyD(mov_lps2vox, dest_lps, dest_ind);
-
-          node->x = VECTOR_ELT(dest_ind, 1);
-          node->y = VECTOR_ELT(dest_ind, 2);
-          node->z = VECTOR_ELT(dest_ind, 3);
-        }
+	node->origx = c;
+	node->origy = r;
+	node->origz = s;
+	node->xn = c;
+	node->yn = r;
+	node->zn = s;
+	
+	VECTOR3_LOAD(orig_ind, c, r, s);
+	orig_lps = MatrixMultiplyD(ref_vox2lps, orig_ind, orig_lps);
+	
+	VECTOR3_LOAD(warp_lps,
+		     MRIgetVoxVal(itk, c, r, s, 0),
+		     MRIgetVoxVal(itk, c, r, s, 1),
+		     MRIgetVoxVal(itk, c, r, s, 2));
+	dest_lps = VectorAdd(orig_lps, warp_lps, dest_lps);
+	dest_ind = MatrixMultiplyD(mov_lps2vox, dest_lps, dest_ind);
+	
+	node->x = VECTOR_ELT(dest_ind, 1);
+	node->y = VECTOR_ELT(dest_ind, 2);
+	node->z = VECTOR_ELT(dest_ind, 3);
       }
     }
   }
   
   MRIfree(&itk);
   MRIfree(&src);
-  if (mask) {
-     MRIfree(&mask);
+  VectorFree(&orig_ind);
+  VectorFree(&orig_lps);
+  VectorFree(&warp_lps);
+  VectorFree(&dest_lps);
+  VectorFree(&dest_ind);
+  MatrixFree(&ras2lps);
+  MatrixFree(&ref_vox2lps);
+  MatrixFree(&mov_vox2lps);
+  MatrixFree(&mov_lps2vox);
+
+  return gcam;
+}
+
+GCAM* readITK2(const string& warp_file, const string& affine_file, const string& src_geom)
+// Write an ITK warp file. ITK (and Ants) uses Left Posterior Superior
+// coordinates.
+{
+
+  MRI* itk = MRIread(warp_file.c_str());
+
+  if (itk == NULL)
+  {
+    cerr << "ERROR: couldn't read input ITK warp from " << warp_file << endl;
+    return NULL;
   }
+
+  MRI* src = MRIread(src_geom.c_str());
+  if (src == NULL)
+  {
+	cerr << "ERROR: couldn't read source geometry from " << src_geom << endl;
+    return NULL;
+  }
+
+  MRI *affine = MRIread(affine_file.c_str());
+  if (affine == NULL)
+    {
+      cerr << "ERROR: couldn't read source affine image from " << src_geom << endl;
+    }
+
+
+  GCA_MORPH* gcam = GCAMalloc(itk->width, itk->height, itk->depth) ;
+  GCAMinitVolGeom(gcam, src, itk) ;
+  gcam->type = GCAM_VOX;
+
+  MATRIX *ras2lps = MatrixIdentity(4, NULL);
+  ras2lps->rptr[1][1] = -1;
+  ras2lps->rptr[2][2] = -1;
+
+  MATRIX* ref_vox2lps = MatrixMultiplyD(ras2lps,
+                                        MRIgetVoxelToRasXform(itk),
+                                        NULL);
+  MATRIX* mov_vox2lps = MatrixMultiplyD(ras2lps,
+                                        MRIgetVoxelToRasXform(src),
+                                        NULL);
+  MATRIX* mov_lps2vox = MatrixInverse(mov_vox2lps, NULL);
+
+  VECTOR* orig_ind = VectorAlloc(4, MATRIX_REAL);
+  VECTOR* dest_ind = VectorAlloc(4, MATRIX_REAL);
+  VECTOR* orig_lps = VectorAlloc(4, MATRIX_REAL);
+  VECTOR* dest_lps = VectorAlloc(4, MATRIX_REAL);
+  VECTOR* warp_lps = VectorAlloc(4, MATRIX_REAL);
+
+  VECTOR_ELT(warp_lps, 4) = 0;
+  VECTOR_ELT(orig_ind, 4) = 1;
+  for(int s=0; s < itk->depth; s++)
+  {
+    for(int c=0; c < itk->width; c++)
+    {
+      for(int r=0; r < itk->height; r++)
+      {
+ 
+        GCA_MORPH_NODE* node = &gcam->nodes[c][r][s];
+	node->xn = c;
+	node->yn = r;
+	node->zn = s;
+
+	VECTOR3_LOAD(orig_ind, c, r, s);
+	orig_lps = MatrixMultiplyD(ref_vox2lps, orig_ind, orig_lps);
+
+	VECTOR3_LOAD(warp_lps,
+		     MRIgetVoxVal(itk, c, r, s, 0),
+		     MRIgetVoxVal(itk, c, r, s, 1),
+		     MRIgetVoxVal(itk, c, r, s, 2));
+	dest_lps = VectorAdd(orig_lps, warp_lps, dest_lps);
+	dest_ind = MatrixMultiplyD(mov_lps2vox, dest_lps, dest_ind);
+
+	node->x = VECTOR_ELT(dest_ind, 1);
+	node->y = VECTOR_ELT(dest_ind, 2);
+	node->z = VECTOR_ELT(dest_ind, 3);
+
+	VECTOR3_LOAD(warp_lps,
+		     MRIgetVoxVal(affine, c, r, s, 0),
+		     MRIgetVoxVal(affine, c, r, s, 1),
+		     MRIgetVoxVal(affine, c, r, s, 2));
+	dest_lps = VectorAdd(orig_lps, warp_lps, dest_lps);
+	dest_ind = MatrixMultiplyD(mov_lps2vox, dest_lps, dest_ind);
+
+	node->origx = VECTOR_ELT(dest_ind, 1);
+	node->origy = VECTOR_ELT(dest_ind, 2);
+	node->origz = VECTOR_ELT(dest_ind, 3);
+
+	
+      }
+    }
+  }
+  
+  MRIfree(&itk);
+  MRIfree(&src);
+
   VectorFree(&orig_ind);
   VectorFree(&orig_lps);
   VectorFree(&warp_lps);
@@ -397,7 +476,15 @@ int main(int argc, char *argv[])
       gcam = readFSL(P.in_warp.c_str());
       break;
     case filetypes::ITK:
-      gcam = readITK(P.in_warp.c_str(),P.in_src_geom);
+      if (P.in_affine == "")
+	{
+	  gcam = readITK(P.in_warp.c_str(),P.in_src_geom);
+	}
+      else
+	{
+	gcam = readITK2(P.in_warp.c_str(), P.in_affine.c_str(), P.in_src_geom);
+	}
+		
       break;
     default:
       ErrorExit(ERROR_BADFILE, "%s: Unknown input type for %s",
@@ -556,11 +643,11 @@ static int parseNextCommand(int argc, char *argv[], Parameters & P)
     cout << "--insrcgeom: " << P.in_src_geom
          << " src image (geometry)." << endl;
   }
-  else if (!strcmp(option, "MASK"))
+  else if (!strcmp(option, "AFFINEIMAGE"))
   {
-    P.in_mask = string(argv[1]);
+    P.in_affine = string(argv[1]);
     nargs = 1;
-    cout << "--mask: " << P.in_mask << endl;
+    cout << "--affineImage: " << P.in_affine << endl;
   }
   else if (!strcmp(option, "HELP") )
   {
